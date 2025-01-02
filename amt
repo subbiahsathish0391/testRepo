@@ -1,0 +1,351 @@
+import React, { useState, useEffect, useMemo } from "react";
+import './IncentiveTable.css';
+import { IconButton, Typography, Toolbar, AppBar } from "@mui/material";
+import { Fullscreen, Close, Done, OpenInFull } from "@mui/icons-material";
+import { Table, TableBody, TableHeader, TableRow, TableHeaderCell, TableCell, Modal } from "@element/react-components";
+import { getRegenAgData } from '../utils';
+
+const IncentivesTable = ({ selectedOrg, selectedYears, selectedCountry, selectedRegion, selectedFarm }) => {
+    const [expanded, setExpanded] = useState(false);
+    const [incentivesData, setIncentivesData] = useState();
+
+    useEffect(() => {
+        const fetchIncentivesData = async () => {
+            const data = await getRegenAgData('report/incentives', {
+                organizationNames: selectedOrg[0].organizationName,
+                countries: selectedCountry,
+                regions: selectedRegion,
+                farms: selectedFarm,
+                years: selectedYears,
+            });
+            setIncentivesData(data);
+        };
+
+        fetchIncentivesData();
+    }, [selectedOrg, selectedFarm, selectedRegion, selectedCountry, selectedYears]);
+
+    const toggleExpand = () => setExpanded(!expanded);
+
+    const closeModal = () => setExpanded(false);
+
+    const getFarmLength = (farm) => farm.fields.reduce((sum, field) => sum + field.years.length, 0);
+
+    const flattenedData = useMemo(() => 
+        incentivesData?.flatMap(farm => 
+            farm.fields.flatMap((field, fieldIndex) =>
+                field.years.map((year, yearIndex) => ({
+                    farmName: farm.farmName,
+                    fieldName: field.fieldName,
+                    farmRowSpan: fieldIndex === 0 && yearIndex === 0 ? getFarmLength(farm) : undefined,
+                    fieldRowSpan: yearIndex === 0 ? field.years.length : undefined,
+                    year: year.year,
+                    companionCrop: year.companionCrop,
+                    coverCrop: year.coverCrop,
+                    coverCropHa: year.coverCropHa,
+                    minimumTillage: year.minimumTillage,
+                    nutrientManagement: year.nutrientManagement,
+                    organicAmendments: year.organicAmendments,
+                }))
+            )
+        ),
+        [incentivesData]
+    );
+
+    return (
+        <div
+            style={{
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                position: "relative",
+                padding: "15px",
+                boxSizing: "border-box",
+                height: "555px",
+                overflow: "hidden",
+                maxWidth: "93vw",
+            }}
+        >
+            {!expanded && (
+                <IconButton
+                    onClick={toggleExpand}
+                    style={{
+                        position: "absolute",
+                        right: 10,
+                        top: 8,
+                        zIndex: 10,
+                        width: 45,
+                        height: 45,
+                        backgroundColor: "#006400",
+                        borderRadius: 4,
+                        padding: 0,
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                    }}
+                >
+                    <OpenInFull
+                        style={{
+                            fontSize: 30,
+                            color: "white",
+                        }}
+                    />
+                </IconButton>
+            )}
+
+            <div
+                style={{
+                    display: "flex",
+                    height: "100%",
+                    overflowX: "hidden",
+                    overflowY: "hidden",
+                    border: "none",
+                }}
+            >
+                <div style={{ width: "320px", height: "100%", border: "none" }}>
+                    <p
+                        style={{
+                            margin: "10px 0px 4px 3px",
+                            fontFamily: "Helvetica Neue",
+                            fontSize: "20px",
+                            fontWeight: "bold",
+                            lineHeight: "1.2",
+                            letterSpacing: "0.25px",
+                            textAlign: "left",
+                            color: "#000",
+                        }}
+                    >
+                        Incentives
+                    </p>
+                    <Table
+                        style={{
+                            tableLayout: "fixed",
+                            width: "356px",
+                            marginTop: "20px",
+                            border: "none",
+                        }}
+                    >
+                        <TableHeader style={{ backgroundColor: "#f0f2f3", height: "20px", border: "none" }}>
+                            <TableRow style={{ backgroundColor: "#f9f9f9", height: "20px" }}>
+                                <TableHeaderCell
+                                    style={{
+                                        position: "sticky",
+                                        left: 0,
+                                        zIndex: 2,
+                                        backgroundColor: "#f0f2f3",
+                                        fontSize: "14px",
+                                        border: "none",
+                                        paddingTop: "-4px",
+                                        paddingBottom: "15px",
+                                        lineHeight: "0.7",
+                                        width: "200px",
+                                    }}
+                                >
+                                    Farm Name
+                                </TableHeaderCell>
+                                <TableHeaderCell
+                                    style={{
+                                        position: "sticky",
+                                        left: "200px",
+                                        zIndex: 2,
+                                        backgroundColor: "#f0f2f3",
+                                        fontSize: "14px",
+                                        border: "none",
+                                        paddingTop: "-9px",
+                                        paddingBottom: "15px",
+                                        lineHeight: "0.5",
+                                        width: "150px",
+                                    }}
+                                >
+                                    Field
+                                </TableHeaderCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {flattenedData?.map((row, index) => (
+                                <TableRow key={index} style={{ borderBottom: "none" }}>
+                                    {row.farmRowSpan && (
+                                        <TableCell
+                                            rowSpan={row.farmRowSpan}
+                                            style={{
+                                                backgroundColor: "#fff",
+                                                color: "#919191",
+                                                border: "none",
+                                                borderBottom: "none",
+                                                padding: "10px",
+                                                maxWidth: "200px",
+                                                verticalAlign: "top",
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    display: "inline-block",
+                                                    padding: "2px 8px",
+                                                    backgroundColor: "rgba(240, 242, 245, 0.57)",
+                                                    borderRadius: "4px",
+                                                }}
+                                            >
+                                                {row.farmName}
+                                            </span>
+                                        </TableCell>
+                                    )}
+                                    {row.fieldRowSpan && (
+                                        <TableCell
+                                            rowSpan={row.fieldRowSpan}
+                                            style={{
+                                                backgroundColor: "#fff",
+                                                color: "#919191",
+                                                border: "none",
+                                                borderBottom: "none",
+                                                padding: "10px",
+                                                maxWidth: "150px",
+                                                verticalAlign: "top",
+                                            }}
+                                        >
+                                            {row.fieldName}
+                                        </TableCell>
+                                    )}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div
+                    style={{
+                        overflowY: "hidden",
+                        overflowX: "scroll",
+                        flexGrow: 1,
+                    }}
+                >
+                    <Table
+                        style={{
+                            border: "none",
+                            tableLayout: "fixed",
+                            marginTop: "58px",
+                            left: "35px",
+                        }}
+                    >
+                        <TableHeader style={{ backgroundColor: "#f0f2f3", height: "20px" }}>
+                            <TableRow style={{ backgroundColor: "#f9f9f9", height: "20px" }}>
+                                <TableHeaderCell>Year</TableHeaderCell>
+                                <TableHeaderCell>Companion Crop</TableHeaderCell>
+                                <TableHeaderCell>Cover Crop</TableHeaderCell>
+                                <TableHeaderCell>Cover Crop Ha</TableHeaderCell>
+                                <TableHeaderCell>Minimum Tillage</TableHeaderCell>
+                                <TableHeaderCell>Nutrient Management</TableHeaderCell>
+                                <TableHeaderCell>Organic Amendments</TableHeaderCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {flattenedData?.map((row, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{row.year}</TableCell>
+                                    <TableCell>{row.companionCrop ? <Done /> : "-"}</TableCell>
+                                    <TableCell>{row.coverCrop ? <Done /> : "-"}</TableCell>
+                                    <TableCell>{row.coverCropHa}</TableCell>
+                                    <TableCell>{row.minimumTillage ? <Done /> : "-"}</TableCell>
+                                    <TableCell>{row.nutrientManagement ? <Done /> : "-"}</TableCell>
+                                    <TableCell>{row.organicAmendments ? <Done /> : "-"}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+
+            {expanded && (
+                <Modal
+                    open={expanded}
+                    onClose={closeModal}
+                    hideBackdrop={false}
+                    BackdropProps={{
+                        style: {
+                            backgroundColor: 'white',
+                        },
+                    }}
+                    style={{
+                        zIndex: 3,
+                        position: "fixed",
+                        backgroundColor: "white",
+                        width: "100%",
+                        height: "100%",
+                    }}
+                >
+                    <div
+                        style={{
+                            border: "2px solid #e8ebed",
+                            borderRadius: "8px",
+                            padding: "16px",
+                            margin: "16px",
+                            backgroundColor: "#fff",
+                            position: "relative",
+                        }}
+                    >
+                    </div>
+                    <IconButton
+                        onClick={closeModal}
+                        style={{
+                            position: "absolute",
+                            right: 16,
+                            top: 16,
+                            zIndex: 2001,
+                            color: "#3c3c3c",
+                        }}
+                    >
+                        <Close />
+                    </IconButton>
+
+                    <div style={{ top: "50px", msOverflowX: "hidden", msOverflowY: "auto", flex: "1" }}>
+                        <p
+                            style={{
+                                margin: "10px 20px 30px 10px",
+                                fontFamily: "Helvetica Neue",
+                                fontSize: "20px",
+                                fontWeight: "600",
+                                lineHeight: "1.2",
+                                letterSpacing: "0.25px",
+                                textAlign: "left",
+                                color: "#000",
+                                width: "200px",
+                                height: "30px",
+                            }}
+                        >
+                            Incentives
+                        </p>
+                        <Table style={{ width: "100%", border: "none" }}>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHeaderCell>Farm Name</TableHeaderCell>
+                                    <TableHeaderCell>Field</TableHeaderCell>
+                                    <TableHeaderCell>Year</TableHeaderCell>
+                                    <TableHeaderCell>Companion Crop</TableHeaderCell>
+                                    <TableHeaderCell>Cover Crop</TableHeaderCell>
+                                    <TableHeaderCell>Cover Crop Ha</TableHeaderCell>
+                                    <TableHeaderCell>Minimum Tillage</TableHeaderCell>
+                                    <TableHeaderCell>Nutrient Management</TableHeaderCell>
+                                    <TableHeaderCell>Organic Amendments</TableHeaderCell>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {flattenedData?.map((row, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{row.farmName}</TableCell>
+                                        <TableCell>{row.fieldName}</TableCell>
+                                        <TableCell>{row.year}</TableCell>
+                                        <TableCell>{row.companionCrop ? <Done /> : "-"}</TableCell>
+                                        <TableCell>{row.coverCrop ? <Done /> : "-"}</TableCell>
+                                        <TableCell>{row.coverCropHa}</TableCell>
+                                        <TableCell>{row.minimumTillage ? <Done /> : "-"}</TableCell>
+                                        <TableCell>{row.nutrientManagement ? <Done /> : "-"}</TableCell>
+                                        <TableCell>{row.organicAmendments ? <Done /> : "-"}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </Modal>
+            )}
+        </div>
+    );
+};
+
+export default IncentivesTable;
