@@ -1,0 +1,250 @@
+import React, { useState, useEffect, useMemo } from "react";
+import "./IncentiveTable.css";
+import {
+    IconButton,
+    Modal
+} from "@mui/material";
+import { OpenInFull, Close, Done } from "@mui/icons-material";
+import {
+    Table,
+    TableHeader,
+    TableHeaderRow,
+    TableHeaderCell,
+    TableCell,
+    TableBody,
+    TableRow
+} from "@element/react-components";
+import { getRegenAgData } from "../utils";
+
+const IncentivesTable = ({ selectedOrg, selectedYears, selectedCountry, selectedRegion, selectedFarm }) => {
+    const [expanded, setExpanded] = useState(false);
+    const [incentivesData, setIncentivesData] = useState();
+
+    useEffect(() => {
+        const fetchIncentivesData = async () => {
+            const data = await getRegenAgData("report/incentives", {
+                organizationNames: selectedOrg[0].organizationName,
+                countries: selectedCountry,
+                regions: selectedRegion,
+                farms: selectedFarm,
+                years: selectedYears,
+            });
+            setIncentivesData(data);
+        };
+        fetchIncentivesData();
+    }, [selectedOrg, selectedFarm, selectedRegion, selectedCountry, selectedYears]);
+
+    const toggleExpand = () => setExpanded(!expanded);
+    const closeModal = () => setExpanded(false);
+
+    const getFarmLength = farm => farm.fields.reduce((sum, field) => sum + field.years.length, 0);
+
+    const flattenedData = useMemo(() => incentivesData?.flatMap(farm =>
+        farm.fields.flatMap((field, fieldIndex) =>
+            field.years.map((year, yearIndex) => ({
+                farmName: farm.farmName,
+                fieldName: field.fieldName,
+                farmRowSpan: fieldIndex === 0 && yearIndex === 0 ? getFarmLength(farm) : undefined,
+                fieldRowSpan: yearIndex === 0 ? field.years.length : undefined,
+                ...year
+            }))
+        )
+    ), [incentivesData]);
+
+    return (
+        <div className="incentives-table-container">
+            {!expanded && (
+                <IconButton onClick={toggleExpand} className="expand-button">
+                    <OpenInFull className="icon" />
+                </IconButton>
+            )}
+
+            <div className="table-wrapper">
+                <div className="fixed-columns">
+                    <p className="table-title">Incentives</p>
+                    <Table className="table">
+                        <TableHeader>
+                            <TableHeaderRow>
+                                <TableHeaderCell>Farm Name</TableHeaderCell>
+                                <TableHeaderCell>Field</TableHeaderCell>
+                            </TableHeaderRow>
+                        </TableHeader>
+                        <TableBody>
+                            {flattenedData?.map((row, index) => (
+                                <TableRow key={index}>
+                                    {row.farmRowSpan && <TableCell rowSpan={row.farmRowSpan}>{row.farmName}</TableCell>}
+                                    {row.fieldRowSpan && <TableCell rowSpan={row.fieldRowSpan}>{row.fieldName}</TableCell>}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <div className="scrollable-columns">
+                    <Table className="table">
+                        <TableHeader>
+                            <TableHeaderRow>
+                                <TableHeaderCell>Year</TableHeaderCell>
+                                <TableHeaderCell>Companion Crop</TableHeaderCell>
+                                <TableHeaderCell>Cover Crop</TableHeaderCell>
+                                <TableHeaderCell>Cover Crop Ha</TableHeaderCell>
+                                <TableHeaderCell>Minimum Tillage</TableHeaderCell>
+                                <TableHeaderCell>Nutrient Management</TableHeaderCell>
+                                <TableHeaderCell>Organic Amendments</TableHeaderCell>
+                            </TableHeaderRow>
+                        </TableHeader>
+                        <TableBody>
+                            {flattenedData?.map((row, index) => (
+                                <TableRow key={index}>
+                                    <TableCell>{row.year}</TableCell>
+                                    <TableCell>{row.companionCrop ? <Done className="icon-done" /> : "-"}</TableCell>
+                                    <TableCell>{row.coverCrop ? <Done className="icon-done" /> : "-"}</TableCell>
+                                    <TableCell>{row.coverCropHa}</TableCell>
+                                    <TableCell>{row.minimumTillage ? <Done className="icon-done" /> : "-"}</TableCell>
+                                    <TableCell>{row.nutrientManagement ? <Done className="icon-done" /> : "-"}</TableCell>
+                                    <TableCell>{row.organicAmendments ? <Done className="icon-done" /> : "-"}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+
+            <Modal open={expanded} onClose={closeModal} className="fullscreen-modal">
+                <div className="modal-content">
+                    <IconButton onClick={closeModal} className="close-button">
+                        <Close />
+                    </IconButton>
+                    <div className="modal-table-wrapper">
+                        <p className="table-title">Incentives</p>
+                        <Table className="table">
+                            <TableHeader>
+                                <TableHeaderRow>
+                                    <TableHeaderCell>Farm Name</TableHeaderCell>
+                                    <TableHeaderCell>Field</TableHeaderCell>
+                                    <TableHeaderCell>Year</TableHeaderCell>
+                                    <TableHeaderCell>Companion Crop</TableHeaderCell>
+                                    <TableHeaderCell>Cover Crop</TableHeaderCell>
+                                    <TableHeaderCell>Cover Crop Ha</TableHeaderCell>
+                                    <TableHeaderCell>Minimum Tillage</TableHeaderCell>
+                                    <TableHeaderCell>Nutrient Management</TableHeaderCell>
+                                    <TableHeaderCell>Organic Amendments</TableHeaderCell>
+                                </TableHeaderRow>
+                            </TableHeader>
+                            <TableBody>
+                                {flattenedData?.map((row, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{row.farmName}</TableCell>
+                                        <TableCell>{row.fieldName}</TableCell>
+                                        <TableCell>{row.year}</TableCell>
+                                        <TableCell>{row.companionCrop ? <Done className="icon-done" /> : "-"}</TableCell>
+                                        <TableCell>{row.coverCrop ? <Done className="icon-done" /> : "-"}</TableCell>
+                                        <TableCell>{row.coverCropHa}</TableCell>
+                                        <TableCell>{row.minimumTillage ? <Done className="icon-done" /> : "-"}</TableCell>
+                                        <TableCell>{row.nutrientManagement ? <Done className="icon-done" /> : "-"}</TableCell>
+                                        <TableCell>{row.organicAmendments ? <Done className="icon-done" /> : "-"}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};
+
+export default IncentivesTable;
+
+
+/* IncentiveTable.css */
+
+.incentives-table-container {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    position: relative;
+    padding: 15px;
+    box-sizing: border-box;
+    height: 555px;
+    overflow: hidden;
+    max-width: 93vh;
+}
+
+.expand-button {
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    z-index: 10;
+    width: 45px;
+    height: 45px;
+    background-color: #006400;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.icon {
+    font-size: 30px;
+    color: white;
+}
+
+.table-wrapper {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+}
+
+.fixed-columns {
+    width: 320px;
+    height: 100%;
+}
+
+.table-title {
+    margin: 10px 0 4px 3px;
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 20px;
+    font-weight: bold;
+    color: #000;
+    text-align: left;
+}
+
+.table {
+    table-layout: fixed;
+    margin-top: 20px;
+}
+
+.scrollable-columns {
+    overflow-x: auto;
+    flex-grow: 1;
+}
+
+.icon-done {
+    color: green;
+    font-size: 20px;
+}
+
+.fullscreen-modal {
+    z-index: 3;
+    position: fixed;
+    background-color: white;
+    width: 100%;
+    height: 100%;
+}
+
+.modal-content {
+    border: 2px solid #e8ebed;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px;
+    background-color: #fff;
+    position: relative;
+}
+
+.close-button {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    z-index: 2001;
+    color: #3c3c3c;
+}
